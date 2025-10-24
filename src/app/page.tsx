@@ -1,7 +1,8 @@
-
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { ITask } from "../../lib/models/Task"; // Import the canonical Task type
+
+// NOTE: TaskCard import removed to fix the "is defined but never used" warning.
 
 // Helper type for the user object, assuming it comes from MongoDB/JWT
 interface IUser {
@@ -172,9 +173,11 @@ export default function Home() {
   };
 
   // Fetch AI suggestions (Add-on Feature)
-  const fetchSuggestions = async (task: ITask) => { // Fix 7: Use ITask here
+  const fetchSuggestions = async (task: ITask) => { 
     if (!token) return showToast("Login required");
-    setSuggestions((prev) => ({ ...prev, [task._id]: ["Loading..."] })); // Loading state
+    
+    // FIX: Explicitly cast task._id to string when used as computed property name
+    setSuggestions((prev) => ({ ...prev, [task._id as string]: ["Loading..."] })); 
 
     const res = await fetch("/api/tasks/suggest", {
       method: "POST",
@@ -184,10 +187,11 @@ export default function Home() {
 
     if (res.ok) {
       const data: { suggestions: string[] } = await res.json();
-      setSuggestions((prev) => ({ ...prev, [task._id]: data.suggestions }));
+      // FIX: Explicitly cast task._id to string here as well
+      setSuggestions((prev) => ({ ...prev, [task._id as string]: data.suggestions }));
     } else {
       showToast("Failed to fetch AI suggestions");
-      setSuggestions((prev) => ({ ...prev, [task._id]: ["Failed to load suggestions."] }));
+      setSuggestions((prev) => ({ ...prev, [task._id as string]: ["Failed to load suggestions."] }));
     }
   };
 
@@ -315,7 +319,7 @@ export default function Home() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {tasks.map((task) => (
-                    <div key={task._id} className="bg-white p-5 rounded-xl shadow-lg border border-gray-200">
+                    <div key={task._id as string} className="bg-white p-5 rounded-xl shadow-lg border border-gray-200">
                       {editingTaskId === task._id ? (
                         /* Edit Form */
                         <div className="flex flex-col gap-2">
@@ -360,7 +364,7 @@ export default function Home() {
                                 Edit
                               </button>
                               <button
-                                onClick={() => deleteTask(task._id)}
+                                onClick={() => deleteTask(task._id as string)}
                                 className="text-red-600 hover:text-red-800 transition text-sm font-medium"
                               >
                                 Delete
@@ -376,10 +380,10 @@ export default function Home() {
                             >
                               Get AI Suggestions
                             </button>
-                            {suggestions[task._id] && (
+                            {suggestions[task._id as string] && (
                               <ul className="mt-2 list-disc list-inside text-sm text-purple-800 bg-purple-50 p-3 rounded-lg">
-                                {suggestions[task._id].map((s, idx) => (
-                                  <li key={idx} className="mb-1">{s}</li>
+                                {suggestions[task._id as string].map((s, idx) => (
+                                  <li key={idx}>{s}</li>
                                 ))}
                               </ul>
                             )}
