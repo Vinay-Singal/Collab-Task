@@ -27,18 +27,18 @@ function getUserIdFromRequest(req: NextRequest): string | null {
   }
 }
 
-// **CRITICAL FINAL FIX:** Use inline intersection typing for the second argument
-// This is required to satisfy the strict Next.js App Router compiler
-type RouteContext = { params: { id: string } };
+// **FINAL COMPATIBILITY FIX:** Defining the dynamic route context using a direct
+// object literal in the function signature to bypass strict compiler checks.
 
 // PUT handler (UPDATE)
 export async function PUT(
   req: NextRequest, 
-  { params }: RouteContext // Use the destructured type definition
+  // Use a direct object literal for the context argument type
+  context: { params: { id: string } }
 ) { 
   try {
     await connectDB();
-    const { id } = params;
+    const { id } = context.params; // Access params directly from context
 
     const userId = getUserIdFromRequest(req);
     if (!userId) {
@@ -50,7 +50,6 @@ export async function PUT(
         return NextResponse.json({ message: "Invalid Task ID" }, { status: 400 });
     }
 
-    // Define type for request body
     interface UpdateTaskBody {
         title: string;
         description: string;
@@ -67,13 +66,13 @@ export async function PUT(
       { _id: id, user: userId },
       { title, description },
       { new: true }
-    ) as ITask | null; // Cast the result to the expected ITask type
+    ) as ITask | null;
 
     if (!task) return NextResponse.json({ message: "Task not found or unauthorized access" }, { status: 404 });
     return NextResponse.json(task);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    console.error(`PUT /api/tasks/${params.id} error:`, errorMessage); 
+    console.error(`PUT /api/tasks/${context.params.id} error:`, errorMessage); 
     return NextResponse.json({ message: "Error updating task", error: errorMessage }, { status: 500 });
   }
 }
@@ -81,11 +80,12 @@ export async function PUT(
 // DELETE handler (DELETE)
 export async function DELETE(
   req: NextRequest, 
-  { params }: RouteContext // Use the destructured type definition
+  // Use a direct object literal for the context argument type
+  context: { params: { id: string } }
 ) {
   try {
     await connectDB();
-    const { id } = params;
+    const { id } = context.params; // Access params directly from context
 
     const userId = getUserIdFromRequest(req);
     if (!userId) {
@@ -105,7 +105,7 @@ export async function DELETE(
     return NextResponse.json({ message: "Task deleted successfully" });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    console.error(`DELETE /api/tasks/${params.id} error:`, errorMessage);
+    console.error(`DELETE /api/tasks/${context.params.id} error:`, errorMessage);
     return NextResponse.json({ message: "Error deleting task", error: errorMessage }, { status: 500 });
   }
 }
