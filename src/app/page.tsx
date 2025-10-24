@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { ITask } from "@/lib/models/Task"; // Import the canonical Task type
+import { ITask } from "../../lib/models/Task"; // Import the canonical Task type
 
 // Assuming you have a TaskCard component defined elsewhere
 import TaskCard from "../../components/TaskCard";
