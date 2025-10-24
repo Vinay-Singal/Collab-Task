@@ -1,8 +1,19 @@
-import OpenAI from "openai"; // Corrected from require()
+import { GoogleGenAI } from "@google/genai"; // Import the GoogleGenAI client
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Use a global variable to cache the client, improving performance
+let client: GoogleGenAI;
+
+// Initialize the client once and reuse it
+function getAIClient(): GoogleGenAI | null {
+  if (process.env.GEMINI_API_KEY) {
+    if (!client) {
+      // Use the GEMINI_API_KEY environment variable
+      client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    }
+    return client;
+  }
+  return null;
+}
 
 /**
  * Ask the model to return 3-5 short suggestion lines for a task.
@@ -11,40 +22,38 @@ const client = new OpenAI({
 export async function getTaskSuggestions(
   title: string,
   description: string
-): Promise<string[]> { // Added explicit return type Promise<string[]>
-  // Basic sanitization
+): Promise<string[]> {
   const safeTitle = (title || "").trim().slice(0, 300);
   const safeDesc = (description || "").trim().slice(0, 1200);
 
-  if (!process.env.OPENAI_API_KEY) {
-    // If no key, return a helpful fallback suggestion list (mock)
+  const aiClient = getAIClient();
+
+  if (!aiClient) {
+    // Fallback if no GEMINI_API_KEY is provided
     return [
       `Consider breaking "${safeTitle}" into smaller subtasks.`,
       `Add a deadline for "${safeTitle}" to improve tracking.`,
       `Clarify prerequisites or dependencies for "${safeTitle}".`,
+      `💡 Set GEMINI_API_KEY in Vercel to enable real AI features.`,
     ];
   }
 
-  const prompt = [
-    `You are a helpful task assistant.`,
-    `Given a task title and description, return 3 concise, actionable suggestions (one per line) to improve/clarify/expand the task. Keep each suggestion short (max 100 characters).`,
-    ``,
-    `Title: ${safeTitle}`,
-    `Description: ${safeDesc}`,
-    ``,
-    `Return only the suggestions as bullet lines or numbered lines.`,
-  ].join("\n");
+  const systemInstruction = `You are a helpful task assistant. Given a task title and description, return 3 concise, actionable suggestions (one per line) to improve, clarify, or expand the task. Keep each suggestion short (max 100 characters). Return ONLY the bulleted suggestions, nothing else.`;
+
+  const userPrompt = `Title: ${safeTitle}\nDescription: ${safeDesc}`;
 
   try {
-    const response = await client.chat.completions.create({
-      model: "gpt-3.5-turbo", // or "gpt-4" if you have access
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.6,
-      max_tokens: 200,
-      n: 1,
+    const response = await aiClient.models.generateContent({
+      model: "gemini-2.5-flash", // Use the powerful and fast flash model
+      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+      config: {
+        systemInstruction: systemInstruction,
+        temperature: 0.6,
+        maxOutputTokens: 200,
+      },
     });
 
-    const raw = response.choices?.[0]?.message?.content || "";
+    const raw = response.text || "";
 
     // Normalize the output into an array of clean strings
     const lines = raw
@@ -54,7 +63,6 @@ export async function getTaskSuggestions(
       .slice(0, 5); // take up to 5 suggestions
 
     if (lines.length === 0) {
-      // fallback if model responded unexpectedly
       return [
         `Add a deadline to "${safeTitle}".`,
         `Break it into smaller subtasks.`,
@@ -64,13 +72,11 @@ export async function getTaskSuggestions(
 
     return lines;
   } catch (err) {
-    console.error("AI error:", err);
+    console.error("Gemini AI error:", err);
     // Fallback suggestions on error
     return [
-      `Consider breaking "${safeTitle}" into smaller subtasks.`,
-      `Add a deadline for "${safeTitle}".`,
-      `Review dependencies before starting "${safeTitle}".`,
-      `💡 To get real AI suggestions, use your own OpenAI API key.`,
+      `Error fetching live suggestions. Review dependencies.`,
+      `💡 Ensure your GEMINI_API_KEY is valid and deployed.`,
     ];
   }
 }
