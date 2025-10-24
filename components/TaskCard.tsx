@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 // Import the ITask interface for strong typing
-import { ITask } from "@/lib/models/Task";
+import { ITask } from "../lib/models/Task";
 
 // Define the Props interface for clarity and type safety
 interface TaskCardProps {
