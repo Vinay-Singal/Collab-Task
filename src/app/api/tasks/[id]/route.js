@@ -1,44 +1,29 @@
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { connectDB } from "../../../../../lib/db";
-import Task, { ITask } from "../../../../../lib/models/Task";
+import Task from "../../../../../lib/models/Task";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
-// Interface to define the expected structure of the decoded JWT payload
-interface JWTPayload {
-  id: string;
-  iat: number;
-  exp: number;
-}
-
 // Helper function to extract and verify the token
-function getUserIdFromRequest(req: NextRequest): string | null {
+function getUserIdFromRequest(req) {
   const authHeader = req.headers.get("authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
 
   const token = authHeader.split(" ")[1];
   try {
-    // Explicitly type the result of jwt.verify with JWTPayload
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     return decoded.id;
-  } catch (_e) { // Suppress unused variable warning
+  } catch (_e) {
     return null;
   }
 }
 
-// **FINAL COMPATIBILITY FIX:** Defining the dynamic route context using a direct
-// object literal in the function signature to bypass strict compiler checks.
-
 // PUT handler (UPDATE)
-export async function PUT(
-  req: NextRequest, 
-  // Use a direct object literal for the context argument type
-  context: { params: { id: string } }
-) { 
+export async function PUT(req, context) {
   try {
     await connectDB();
-    const { id } = context.params; // Access params directly from context
+    const id = context.params.id; // Access params directly from context
 
     const userId = getUserIdFromRequest(req);
     if (!userId) {
@@ -50,12 +35,7 @@ export async function PUT(
         return NextResponse.json({ message: "Invalid Task ID" }, { status: 400 });
     }
 
-    interface UpdateTaskBody {
-        title: string;
-        description: string;
-    }
-    
-    const { title, description } = await req.json() as UpdateTaskBody;
+    const { title, description } = await req.json();
     
     if (!title || !description) {
         return NextResponse.json({ message: "Title and description are required" }, { status: 400 });
@@ -66,7 +46,7 @@ export async function PUT(
       { _id: id, user: userId },
       { title, description },
       { new: true }
-    ) as ITask | null;
+    );
 
     if (!task) return NextResponse.json({ message: "Task not found or unauthorized access" }, { status: 404 });
     return NextResponse.json(task);
@@ -78,14 +58,10 @@ export async function PUT(
 }
 
 // DELETE handler (DELETE)
-export async function DELETE(
-  req: NextRequest, 
-  // Use a direct object literal for the context argument type
-  context: { params: { id: string } }
-) {
+export async function DELETE(req, context) {
   try {
     await connectDB();
-    const { id } = context.params; // Access params directly from context
+    const id = context.params.id; // Access params directly from context
 
     const userId = getUserIdFromRequest(req);
     if (!userId) {
