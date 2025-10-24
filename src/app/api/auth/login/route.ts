@@ -23,24 +23,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Invalid email or password" }, { status: 401 });
     }
 
+    // Ensure JWT_SECRET is available at runtime
     if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET is not defined in .env.local");
+      // Throw an error here since this is a critical configuration failure
+      throw new Error("JWT_SECRET environment variable is not defined.");
     }
 
     // Create JWT token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
-    // Exclude password from response
+    // Exclude password from response (Fixes TypeScript/ESLint warnings)
     const { password: _password, ...userWithoutPassword } = user.toObject();
-
-    // Optionally set token as httpOnly cookie
-    // const response = NextResponse.json({ message: "Login successful", user: userWithoutPassword });
-    // response.cookies.set("token", token, { httpOnly: true, secure: true, maxAge: 60*60*24 });
-    // return response;
 
     return NextResponse.json({ message: "Login successful", user: userWithoutPassword, token });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ message: "Error logging in" }, { status: 500 });
+    // Standardized error response for API stability
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    console.error("Login Error:", errorMessage);
+    return NextResponse.json({ message: "Internal server error during login", error: errorMessage }, { status: 500 });
   }
 }
