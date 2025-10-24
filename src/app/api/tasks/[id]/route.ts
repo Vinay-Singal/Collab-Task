@@ -23,17 +23,19 @@ function getUserIdFromRequest(req: NextRequest): string | null {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
     return decoded.id;
   } catch (_e) { // Suppress unused variable warning
-    // Token is invalid, expired, or secret is wrong
     return null;
   }
 }
 
-// **CRITICAL FIX:** Use the standard Next.js Route Handler signature.
-// The second argument must be typed as an object with `params` destructured from it.
-type RouteParams = { params: { id: string } };
+// **CRITICAL FINAL FIX:** Use inline intersection typing for the second argument
+// This is required to satisfy the strict Next.js App Router compiler
+type RouteContext = { params: { id: string } };
 
 // PUT handler (UPDATE)
-export async function PUT(req: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  req: NextRequest, 
+  { params }: RouteContext // Use the destructured type definition
+) { 
   try {
     await connectDB();
     const { id } = params;
@@ -71,14 +73,16 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json(task);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    // Use params.id for logging
     console.error(`PUT /api/tasks/${params.id} error:`, errorMessage); 
     return NextResponse.json({ message: "Error updating task", error: errorMessage }, { status: 500 });
   }
 }
 
 // DELETE handler (DELETE)
-export async function DELETE(req: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+  req: NextRequest, 
+  { params }: RouteContext // Use the destructured type definition
+) {
   try {
     await connectDB();
     const { id } = params;
@@ -101,7 +105,6 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ message: "Task deleted successfully" });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    // Use params.id for logging
     console.error(`DELETE /api/tasks/${params.id} error:`, errorMessage);
     return NextResponse.json({ message: "Error deleting task", error: errorMessage }, { status: 500 });
   }
