@@ -17,15 +17,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Email already registered" }, { status: 400 });
     }
 
+    // Hash the password with 10 salt rounds
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ username, email, password: hashedPassword });
 
-    // Exclude password in response
+    // Exclude password in response by destructuring it to _password
     const { password: _password, ...userWithoutPassword } = user.toObject();
 
     return NextResponse.json({ message: "User registered", user: userWithoutPassword }, { status: 201 });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ message: "Error registering user" }, { status: 500 });
+    // Standardized error response for API stability
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    console.error("Registration Error:", errorMessage);
+    return NextResponse.json({ message: "Error registering user", error: errorMessage }, { status: 500 });
   }
 }
