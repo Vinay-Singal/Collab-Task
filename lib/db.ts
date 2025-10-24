@@ -11,11 +11,11 @@ interface MongooseCache {
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
+  // We throw an Error if it's missing, guaranteeing it's a string below this point.
   throw new Error("Please define the MONGODB_URI environment variable.");
 }
 
 // 2. Access the global object and assert its type
-// Initialize the cache object directly on the global object if it doesn't exist.
 const globalWithMongoose = global as typeof global & {
   mongoose?: MongooseCache;
 };
@@ -25,7 +25,7 @@ if (!globalWithMongoose.mongoose) {
 }
 
 export async function connectDB() {
-  const cache = globalWithMongoose.mongoose!; // Use non-null assertion after initialization check
+  const cache = globalWithMongoose.mongoose!;
 
   if (cache.conn) {
     console.log("Using cached database connection.");
@@ -34,16 +34,14 @@ export async function connectDB() {
   
   if (!cache.promise) {
     console.log("Creating new database connection...");
-    // Start the connection process and store the promise
+    // FIX: Use non-null assertion operator (!) on MONGODB_URI to guarantee the type checker
+    // that the value is a string, since we checked for it above.
     cache.promise = mongoose
-      .connect(MONGODB_URI)
-      .then((mongooseInstance) => mongooseInstance); // Resolves to the mongoose object
+      .connect(MONGODB_URI!) 
+      .then((mongooseInstance) => mongooseInstance);
   }
   
-  // Wait for the connection promise to resolve
   const mongooseInstance = await cache.promise;
-
-  // Set the connection object on the cache
   cache.conn = mongooseInstance.connection;
   
   console.log("Database connection established.");
