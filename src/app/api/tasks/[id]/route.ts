@@ -1,6 +1,7 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "../../../../../lib/db";
-import Task, { ITask } from "../../../../../lib/models/Task"; // Import ITask for casting
+import Task, { ITask } from "../../../../../lib/models/Task";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
@@ -9,6 +10,11 @@ interface JWTPayload {
   id: string;
   iat: number;
   exp: number;
+}
+
+// **CRITICAL FIX:** Next.js standard type for dynamic route context
+interface RouteContext {
+  params: { id: string };
 }
 
 // Helper function to extract and verify the token
@@ -21,16 +27,18 @@ function getUserIdFromRequest(req: NextRequest): string | null {
     // Explicitly type the result of jwt.verify with JWTPayload
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
     return decoded.id;
-  } catch (e) {
+  } catch (_e) { // Renamed to _e to suppress unused variable warning
     // Token is invalid, expired, or secret is wrong
     return null;
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+// PUT handler (UPDATE)
+// Applying the corrected type: RouteContext is the type for the second argument
+export async function PUT(req: NextRequest, context: RouteContext) { 
   try {
     await connectDB();
-    const { id } = params;
+    const { id } = context.params; // Destructure params from the context object
 
     const userId = getUserIdFromRequest(req);
     if (!userId) {
@@ -65,15 +73,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json(task);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    console.error(`PUT /api/tasks/${params.id} error:`, errorMessage);
+    // Use context.params.id for logging
+    console.error(`PUT /api/tasks/${context.params.id} error:`, errorMessage); 
     return NextResponse.json({ message: "Error updating task", error: errorMessage }, { status: 500 });
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+// DELETE handler (DELETE)
+// Applying the corrected type: RouteContext is the type for the second argument
+export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     await connectDB();
-    const { id } = params;
+    const { id } = context.params; // Destructure params from the context object
 
     const userId = getUserIdFromRequest(req);
     if (!userId) {
@@ -93,7 +104,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ message: "Task deleted successfully" });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    console.error(`DELETE /api/tasks/${params.id} error:`, errorMessage);
+    // Use context.params.id for logging
+    console.error(`DELETE /api/tasks/${context.params.id} error:`, errorMessage);
     return NextResponse.json({ message: "Error deleting task", error: errorMessage }, { status: 500 });
   }
 }
