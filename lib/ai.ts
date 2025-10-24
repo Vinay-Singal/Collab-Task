@@ -1,5 +1,4 @@
-// lib/ai.ts
-const OpenAI = require("openai");
+import OpenAI from "openai"; // Corrected from require()
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -9,7 +8,10 @@ const client = new OpenAI({
  * Ask the model to return 3-5 short suggestion lines for a task.
  * Returns an array of suggestion strings.
  */
-export async function getTaskSuggestions(title: string, description: string) {
+export async function getTaskSuggestions(
+  title: string,
+  description: string
+): Promise<string[]> { // Added explicit return type Promise<string[]>
   // Basic sanitization
   const safeTitle = (title || "").trim().slice(0, 300);
   const safeDesc = (description || "").trim().slice(0, 1200);
@@ -30,7 +32,7 @@ export async function getTaskSuggestions(title: string, description: string) {
     `Title: ${safeTitle}`,
     `Description: ${safeDesc}`,
     ``,
-    `Return only the suggestions as bullet lines or numbered lines.`
+    `Return only the suggestions as bullet lines or numbered lines.`,
   ].join("\n");
 
   try {
